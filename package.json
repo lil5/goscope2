@@ -1,0 +1,9 @@
+{
+  "scripts": {
+    "build": "npx tailwindcss  -o ./tailwind.min.css"
+  },
+  "dependencies": {
+    "daisyui": "^2.51.3",
+    "tailwindcss": "^3.2.7"
+  }
+}

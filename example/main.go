@@ -1,14 +1,3 @@
-# GoScope2
-
-The second iteration from where josep left off
-
-A log tracker, with a basic ui.
-
-Requireds golangs **gin** http framework and web **api calls**.
-
-## Basic Usage
-
-```golang
 package main
 
 import (
@@ -41,8 +30,3 @@ func main() {
 
 	r.Run("localhost:8080")
 }
-```
-
-## License
-
-Mozilla Public License 2.0

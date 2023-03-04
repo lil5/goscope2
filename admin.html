@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <link href="./tailwind.min.css" rel="stylesheet" type="text/css" />
+    <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dayjs@1/plugin/calendar.js"></script>
+    <script>
+      globalThis.dayjs.extend(window.dayjs_plugin_calendar);
+    </script>
+    <link href="https://unpkg.com/css.gg/icons/all.css" rel="stylesheet" />
+
+    <!-- prettier-ignore-attribute -->
+    <script>
+      document.addEventListener("alpine:init", () => {
+        Alpine.store("data", {
+          // prettier-ignore
+          logs: {{.List}},
+          // prettier-ignore
+          apps: {{.AllowedApps}},
+        });
+        Alpine.data("body", () => ({
+          logsApp: [],
+          page: 10,
+          pageEnd: false,
+          selectedLog: {
+            id: 81,
+            app: 104365,
+            message_hash: "70bb149493",
+            severity: "WARNING",
+            message: "Run warning",
+            origin: "",
+            user_agent: "",
+            url: "",
+            status: 0,
+            created_at: "2023-03-03T04:06:14.002758619+01:00",
+          },
+          selectedAppID: null,
+          darkMode: null,
+          init() {
+            let appIDs = Object.keys(this.$store.data.apps);
+            if (appIDs.length) {
+              this.selectApp(appIDs[0]);
+            }
+            if (
+              window.matchMedia &&
+              window.matchMedia("(prefers-color-scheme: dark)").matches
+            ) {
+              this.darkMode = true;
+            }
+          },
+          selectApp(id) {
+            this.selectedAppID = id;
+            this.selectedLog = null;
+            this.page = 10;
+            this.pageEnd = false;
+            this.setList();
+          },
+          selectError(id) {},
+          setList() {
+            const id = this.selectedAppID;
+            if (!id) {
+              this.logsApp = [];
+            }
+            const dataLogsLen = this.$store.data.logs.length;
+            let i = 0,
+              arr = [];
+            while (i < dataLogsLen && arr.length < this.page) {
+              let item = this.$store.data.logs[i];
+              if (item.app == id) arr.push(item);
+              i++;
+              if (i == dataLogsLen) this.pageEnd = true;
+            }
+            this.logsApp = arr;
+          },
+          next() {
+            this.page += 10;
+            this.setList();
+          },
+          handleScroll(e) {
+            if (!this.pageEnd && this.atBottom(e.target)) {
+              this.$dispatch("scrolled-to-bottom");
+            }
+          },
+          // utils
+          day(timestamp) {
+            const d = globalThis.dayjs(timestamp);
+
+            return d.calendar(null, {
+              nextWeek: "YYYY-MM-DD",
+              nextDay: "YYYY-MM-DD",
+              sameDay: "HH:mm ss",
+              lastDay: "ddd HH:mm",
+              lastWeek: "ddd HH:mm",
+              sameElse: "YYYY-MM-DD",
+            });
+          },
+          atBottom(el) {
+            let sh = el.scrollHeight,
+              st = el.scrollTop,
+              ht = el.offsetHeight;
+            if (ht == 0) return true;
+            return st == sh - ht;
+          },
+        }));
+      });
+    </script>
+
+    <script
+      defer
+      src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"
+    ></script>
+
+    <link rel="icon" type="image/x-icon" href="./logo.webp" />
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  </head>
+  <body
+    class="bg-base-200"
+    x-data="body"
+    x-bind:data-theme="darkMode ===true ? 'dark': darkMode === false ?'light':''"
+  >
+    <div class="drawer drawer-mobile">
+      <input id="my-drawer" type="checkbox" class="drawer-toggle" />
+
+      <div class="drawer-content bg-base-200">
+        <nav class="navbar bg-base-100">
+          <div class="navbar-start">
+            <label class="btn btn-square btn-ghost lg:hidden" for="my-drawer">
+              <i class="gg-menu"></i>
+            </label>
+
+            <img
+              class="h-12 w-12 md:ml-2"
+              alt="the eye of the golang hamster mascot looking through a telescope at stars"
+              src="./logo.webp"
+            />
+            <span class="font-bold text-xl ml-2">GoScope2</span>
+          </div>
+
+          <div class="navbar-end">
+            <button
+              class="mr-4 btn btn-circle bg-base-content text-base-100 hover:text-base-content hover:bg-base-100 btn-sm"
+              @click.prevent="darkMode =!darkMode"
+            >
+              <i class="gg-drop-invert"></i>
+            </button>
+            <div class="dropdown dropdown-end">
+              <button class="btn btn-square btn-primary rounded-xl">
+                <i class="gg-album"></i>
+              </button>
+              <ul
+                tabindex="0"
+                class="menu menu-compact dropdown-content mt-3 p-2 shadow bg-base-100 rounded-box w-52"
+              >
+                <template x-for="(app, appID) in $store.data.apps">
+                  <li>
+                    <a
+                      :class="{'active': selectedAppID == appID}"
+                      @click.prevent="selectApp(appID)"
+                      x-text="app"
+                    ></a>
+                  </li>
+                </template>
+              </ul>
+            </div>
+          </div>
+        </nav>
+
+        <main class="p-4">
+          <template x-if="selectedLog">
+            <div class="max-w-screen-md mr-auto bg-base-100 rounded p-4">
+              <div class="mb-4 flex items-center rounded-lg bg-primary/10 p-1">
+                <h1
+                  class="w-full truncate text-2xl"
+                  x-text="selectedLog.message"
+                ></h1>
+                <button
+                  class="btn btn-sm btn-square btn-ghost"
+                  @click="navigator.clipboard.writeText(selectedLog.message);"
+                >
+                  <i class="gg-copy"></i>
+                </button>
+              </div>
+
+              <div class="flex flex-col md:flex-row-reverse">
+                <div
+                  class="w-full md:w-1/3 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-1"
+                >
+                  <div class="mb-4 py-4 px-8">
+                    <div class="text-sm">Severity</div>
+                    <div
+                      class="text-3xl font-bold text-error"
+                      :class="{
+                      'text-secondary': selectedLog.severity == 'FATAL',
+                      'text-error': selectedLog.severity == 'ERROR',
+                      'text-warning': selectedLog.severity == 'WARNING',
+                      'text-info': selectedLog.severity == 'INFO',
+                    }"
+                      x-text="selectedLog.severity"
+                    ></div>
+                  </div>
+                </div>
+
+                <dl class="grid sm:grid-cols-2 flex-grow">
+                  <dt class="mb-1 font-bold" x-show="selectedLog.status">
+                    HTTP Status:
+                  </dt>
+                  <dd
+                    class="ml-8 sm:ml-0 sm:text-right mb-2"
+                    x-show="selectedLog.status"
+                  >
+                    <span
+                      class="badge badge-warning font-bold text-lg py-3"
+                      x-text="selectedLog.status"
+                    ></span>
+                  </dd>
+                  <dt class="mb-1 font-bold">Timestamp:</dt>
+                  <dd
+                    class="ml-8 sm:ml-0 sm:text-right mb-2"
+                    x-text="globalThis.dayjs(selectedLog.created_at).toISOString()"
+                  ></dd>
+                  <dt
+                    class="mb-1 font-bold sm:col-span-2"
+                    x-show="selectedLog.user_agent"
+                  >
+                    User Agent:
+                  </dt>
+                  <dd
+                    class="ml-8 sm:ml-0 mb-2 sm:col-span-2"
+                    x-show="selectedLog.user_agent"
+                  >
+                    <textarea
+                      readonly
+                      class="textarea bg-primary/10 w-full"
+                      @click="$event.target.select()"
+                      x-text="selectedLog.user_agent"
+                    ></textarea>
+                  </dd>
+                  <dt class="mb-1 font-bold" x-show="selectedLog.origin">
+                    Origin:
+                  </dt>
+                  <dd
+                    class="ml-8 sm:ml-0 sm:text-right mb-2 font-bold fond-mono"
+                    x-show="selectedLog.origin"
+                    x-text="selectedLog.origin"
+                  ></dd>
+                  <dt
+                    class="mb-1 font-bold sm:col-span-2"
+                    x-show="selectedLog.url"
+                  >
+                    Url:
+                  </dt>
+                  <dd
+                    class="ml-8 sm:ml-0 sm:text-right mb-2 sm:col-span-2"
+                    x-show="selectedLog.url"
+                  >
+                    <a
+                      class="link"
+                      x-bind:href="selectedLog.user_agent"
+                      x-text="selectedLog.url"
+                    ></a>
+                  </dd>
+                </dl>
+              </div>
+            </div>
+          </template>
+        </main>
+      </div>
+
+      <aside class="drawer-side">
+        <div class="drawer-overlay"></div>
+        <div class="flex flex-col h-screen bg-base-100 w-80">
+          <div class="navbar flex-row justify-between">
+            <span class="text-xl px-4">Errors</span>
+
+            <label class="btn btn-square btn-ghost lg:hidden" for="my-drawer">
+              <i class="gg-menu"></i>
+            </label>
+          </div>
+
+          <div
+            class="h-full overflow-y-auto"
+            @scrolled-to-bottom.debounce="next"
+            @scroll="handleScroll"
+          >
+            <ul class="h-full text-base-content">
+              <template x-for="item in logsApp" :key="item.id">
+                <li>
+                  <button
+                    class="px-4 h-20 w-full group hover:bg-base-300"
+                    :class="{
+                    'bg-primary/10 hover:bg-primary/20':  selectedLog &&item.id ==selectedLog.id
+                  }"
+                    @click.prevent="selectedLog = item"
+                  >
+                    <div
+                      class="w-full text-left truncate mb-2"
+                      :class="{
+                        'font-bold': selectedLog && item.id == selectedLog.id
+                      }"
+                      x-text="item.message"
+                    ></div>
+                    <div class="w-full flex justify-between">
+                      <div>
+                        <span
+                          class="badge"
+                          :class="{
+                            'badge-secondary': item.severity == 'FATAL',
+                        'badge-error': item.severity == 'ERROR',
+                        'badge-warning': item.severity == 'WARNING',
+                        'badge-ghost': item.severity == 'INFO',
+                      }"
+                          x-text="item.severity"
+                        ></span>
+                      </div>
+                      <div>
+                        <span
+                          class="bg-base-300 group-hover:bg-base-100 px-2 rounded-sm font-mono"
+                          x-text="day(item.created_at)"
+                        ></span>
+                      </div>
+                    </div>
+                  </button>
+                </li>
+              </template>
+
+              <li
+                class="flex justify-center py-4"
+                x-show="!pageEnd && logsApp.length"
+              >
+                <i class="gg-loadbar-alt"></i>
+              </li>
+              <template x-if="logsApp.length == 0">
+                <li class="w-full h-full flex justify-center items-center">
+                  <div class="flex flex-col items-center text-xl">
+                    <i class="gg-bot"></i>
+                    <p class="mt-2">Empty</p>
+                  </div>
+                </li>
+              </template>
+            </ul>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </body>
+</html>
