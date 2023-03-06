@@ -81,7 +81,10 @@
             this.pageEnd = false;
             this.setList();
           },
-          selectError(id) {},
+          selectLog(item) {
+            this.selectedLog = item
+            document.getElementById("my-drawer").checked = false
+          },
           setList() {
             const id = this.selectedAppID;
             if (!id) {
@@ -131,6 +134,19 @@
               ht = el.offsetHeight;
             if (ht == 0) return true;
             return st == sh - ht;
+          },
+          async countOccurrence(hash) {
+            if (!hash) return '0'
+            let i = 0,
+            count = 0;
+            const dataLogsLen = this.$store.data.logs.length;
+            while (i < dataLogsLen && count <= 100 ) {
+              let item = this.$store.data.logs[i];
+              if (item.hash == hash) count++;
+              i++;
+            }
+            if (count === 100) return '99+'
+            return ''+count
           },
         }));
       });
@@ -230,6 +246,14 @@
                       x-text="selectedLog.severity"
                     ></div>
                   </div>
+
+                  <div class="mb-4 py-4 px-8">
+                    <div class="text-sm">Occurrence</div>
+                    <div class="text-3xl font-bold">
+                      <span x-text="countOccurrence(selectedLog.hash)"></span>
+                      <span class="text-xl text-base-content/80">Logged</span>
+                    </div>
+                  </div>
                 </div>
 
                 <dl class="grid sm:grid-cols-2 flex-grow">
@@ -241,7 +265,12 @@
                     x-show="selectedLog.status"
                   >
                     <span
-                      class="badge badge-warning font-bold text-lg py-3"
+                      class="font-bold badge text-lg py-3"
+                      :class="{
+                        'badge-error': selectedLog.status >= 500,
+                        'badge-warning': selectedLog.status >= 400 && selectedLog.status < 500,
+                        'badge-info': selectedLog.status < 400,
+                      }"
                       x-text="selectedLog.status"
                     ></span>
                   </dd>
@@ -304,8 +333,8 @@
           <div class="navbar flex-row justify-between">
             <span class="text-xl px-4">Errors</span>
 
-            <label class="btn btn-square btn-ghost lg:hidden" for="my-drawer">
-              <i class="gg-menu"></i>
+            <label class="btn btn-square btn-ghost bg-base-200 lg:hidden" for="my-drawer">
+              <i class="gg-chevron-left"></i>
             </label>
           </div>
 
@@ -322,7 +351,7 @@
                     :class="{
                     'bg-primary/10 hover:bg-primary/20':  selectedLog &&item.id ==selectedLog.id
                   }"
-                    @click.prevent="selectedLog = item"
+                    @click.prevent="selectLog(item)"
                   >
                     <div class="w-full flex justify-between">
                       <div
@@ -335,7 +364,7 @@
                       <span
                         x-text="item.status"
                         x-show="item.status"
-                        class="font-mono font-bold badge"
+                        class="font-bold badge"
                         :class="{
                         'badge-error': item.status >= 500,
                         'badge-warning': item.status >= 400 && item.status < 500,
@@ -358,9 +387,17 @@
                       </div>
                       <div>
                         <span
-                          class="bg-base-300 group-hover:bg-base-100 px-2 rounded-sm font-mono"
-                          x-text="day(item.created_at)"
-                        ></span>
+                          class="inline-flex bg-base-300 group-hover:bg-base-100 rounded-sm font-mono"
+                        >
+                          <span
+                            class="px-2"
+                            x-text="day(item.created_at)"
+                          ></span>
+                          <span
+                            class="px-2 bg-base-content text-base-100"
+                            x-text="'x'+await countOccurrence(item.hash)"
+                          ></span>
+                        </span>
                       </div>
                     </div>
                   </button>

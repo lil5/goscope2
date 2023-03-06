@@ -91,13 +91,13 @@ func (r *Routes) PostJsLog(c *gin.Context) {
 	}
 
 	r.DB.Create(&Goscope2Log{
-		App:         app,
-		MessageHash: generateMessageHash(body.Message),
-		Severity:    body.Severity,
-		Message:     body.Message,
-		URL:         c.Request.Host,
-		Origin:      c.Request.RemoteAddr,
-		UserAgent:   c.Request.Header.Get("User-Agent"),
+		App:       app,
+		Hash:      generateMessageHash(body.Message),
+		Severity:  body.Severity,
+		Message:   body.Message,
+		URL:       c.Request.Host,
+		Origin:    c.Request.RemoteAddr,
+		UserAgent: c.Request.Header.Get("User-Agent"),
 	})
 
 	checkAndPurge(r.DB, r.LimitLogs)

@@ -24,10 +24,10 @@ func notify(config Config, severity string, format string, args ...any) {
 	message := fmt.Sprintf(format, args...)
 	checkAndPurge(config.DB, config.LimitLogs)
 	config.DB.Create(&Goscope2Log{
-		App:         config.InternalApp,
-		MessageHash: generateMessageHash(message),
-		Severity:    severity,
-		Message:     message,
+		App:      config.InternalApp,
+		Hash:     generateMessageHash(message),
+		Severity: severity,
+		Message:  message,
 	})
 }
 

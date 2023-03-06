@@ -12,7 +12,7 @@ type Goscope2Log struct {
 	ID  uint  `json:"id"`
 	App int32 `gorm:"not null" json:"app"`
 	// use generateMessageHash()
-	MessageHash string `gorm:"index,not null" json:"message_hash"`
+	Hash string `gorm:"index,not null" json:"hash"`
 	// one of: `FATAL` `ERROR` `WARNING` `INFO`
 	Severity string `gorm:"not null" json:"severity"`
 	Message  string `gorm:"not null" json:"message"`
