@@ -81,9 +81,10 @@ func (gs *GoScope2) AddGinMiddleware(minimumStatus int) func(*gin.Context) {
 		}
 		log := &Goscope2Log{
 			App:       gs.InternalApp,
+			Type:      TYPE_GIN,
 			Severity:  severity,
 			Message:   requestPath,
-			Hash:      "",
+			Hash:      generateMessageHash(requestPath),
 			URL:       requestPath,
 			Origin:    c.ClientIP(),
 			UserAgent: c.Request.Header.Get("User-Agent"),
@@ -138,6 +139,7 @@ func (r *routes) PostJsLog(c *gin.Context) {
 	maybeCheckAndPurge(r.DB, r.LimitLogs)
 	r.DB.Create(&Goscope2Log{
 		App:       app,
+		Type:      TYPE_JS,
 		Hash:      generateMessageHash(body.Message),
 		Severity:  body.Severity,
 		Message:   body.Message,

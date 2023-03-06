@@ -9,9 +9,16 @@ import (
 	"gorm.io/gorm"
 )
 
+const (
+	TYPE_LOG = "log"
+	TYPE_GIN = "gin"
+	TYPE_JS  = "js"
+)
+
 type Goscope2Log struct {
-	ID  uint  `json:"id"`
-	App int32 `gorm:"not null" json:"app"`
+	ID   uint   `json:"id"`
+	App  int32  `gorm:"not null" json:"app"`
+	Type string `gorm:"not null" json:"type"`
 	// use generateMessageHash()
 	Hash string `gorm:"index,not null" json:"hash"`
 	// one of: `FATAL` `ERROR` `WARNING` `INFO`

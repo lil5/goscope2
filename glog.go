@@ -25,6 +25,7 @@ func notify(gs *GoScope2, severity string, format string, args ...any) {
 	maybeCheckAndPurge(gs.DB, gs.LimitLogs)
 	gs.DB.Create(&Goscope2Log{
 		App:      gs.InternalApp,
+		Type:     TYPE_LOG,
 		Hash:     generateMessageHash(message),
 		Severity: severity,
 		Message:  message,

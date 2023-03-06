@@ -12,7 +12,7 @@ import (
 
 func main() {
 	flag.Parse()
-	db, _ := gorm.Open(sqlite.Open("gorm.db"), &gorm.Config{})
+	db, _ := gorm.Open(sqlite.Open("test.db"), &gorm.Config{})
 	r := gin.New()
 	gs := goscope2.New(goscope2.GoScope2{
 		DB: db,

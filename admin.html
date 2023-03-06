@@ -333,7 +333,10 @@
           <div class="navbar flex-row justify-between">
             <span class="text-xl px-4">Errors</span>
 
-            <label class="btn btn-square btn-ghost bg-base-200 lg:hidden" for="my-drawer">
+            <label
+              class="btn btn-square btn-ghost bg-base-200 lg:hidden"
+              for="my-drawer"
+            >
               <i class="gg-chevron-left"></i>
             </label>
           </div>
@@ -347,7 +350,7 @@
               <template x-for="item in logsApp" :key="item.id">
                 <li>
                   <button
-                    class="px-4 h-20 w-full group hover:bg-base-300"
+                    class="px-4 h-20 w-full group hover:bg-base-300 border-b border-base-300/80"
                     :class="{
                     'bg-primary/10 hover:bg-primary/20':  selectedLog &&item.id ==selectedLog.id
                   }"
@@ -387,15 +390,19 @@
                       </div>
                       <div>
                         <span
-                          class="inline-flex bg-base-300 group-hover:bg-base-100 rounded-sm font-mono"
+                          class="inline-flex bg-base-300 group-hover:bg-base-100 rounded-sm font-mono text-sm"
                         >
                           <span
                             class="px-2"
                             x-text="day(item.created_at)"
                           ></span>
                           <span
-                            class="px-2 bg-base-content text-base-100"
-                            x-text="'x'+await countOccurrence(item.hash)"
+                            class="px-2 text-base-100"
+                            :class="item.type == 'gin'?'bg-primary': 
+                                    item.type == 'js'?'bg-secondary': 
+                                    item.type == 'log'?'bg-accent': 
+                                    'bg-base-content'"
+                            x-text="item.type"
                           ></span>
                         </span>
                       </div>
