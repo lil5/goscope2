@@ -7,14 +7,16 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 	"text/template"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang/glog"
+	ginmiddleware "github.com/lil5/goscope2/pkg/gin-middleware"
 	"gorm.io/gorm"
 )
 
-type Config struct {
+type GoScope2 struct {
 	DB *gorm.DB
 	// default is 700
 	LimitLogs int
@@ -29,34 +31,77 @@ type Config struct {
 	AuthPass    string
 }
 
-var Goscope2 struct{ config *Config }
-
 // Initiates the goscope2 table
 // Set defaults if necessary.
-func New(c Config) {
+func New(gs GoScope2) *GoScope2 {
 	// set defaults to config
-	if c.LimitLogs == 0 {
-		c.LimitLogs = 700
+	if gs.LimitLogs == 0 {
+		gs.LimitLogs = 700
 	}
 
-	c.DB.AutoMigrate(&Goscope2Log{})
+	gs.DB.AutoMigrate(&Goscope2Log{})
 
-	Goscope2.config = &c
+	return &gs
 }
 
-func AddRoutes(r *gin.RouterGroup) {
-	routes := &Routes{Goscope2.config}
-	r.POST("/goscope2/", routes.PostJsLog)
-	r.GET("/goscope2/admin", routes.Admin)
-	r.GET("/goscope2/logo.webp", routes.Favicon)
-	r.GET("/goscope2/tailwind.min.css", routes.Tailwind)
+func (gs *GoScope2) AddAdminRoutes(g *gin.RouterGroup) {
+	r := &routes{gs}
+	g.GET("/goscope2/admin", r.Admin)
+	g.GET("/goscope2/logo.webp", r.Favicon)
+	g.GET("/goscope2/tailwind.min.css", r.Tailwind)
 }
 
-type Routes struct{ *Config }
+func (gs *GoScope2) AddJsRoute(g *gin.RouterGroup) {
+	r := &routes{gs}
+	g.POST("/goscope2/", r.PostJsLog)
+}
 
-func (r Routes) jsAuth(c *gin.Context) (app int32, ok bool) {
+func (gs *GoScope2) AddGinMiddleware(minimumStatus int) func(*gin.Context) {
+	return func(c *gin.Context) {
+		details := ginmiddleware.ObtainBodyLogWriter(c)
+		c.Next()
+
+		status := details.Blw.Status()
+		requestPath := c.FullPath()
+		if requestPath == "" {
+			// Use URL as fallback when path is not recognized as route
+			requestPath = c.Request.URL.String()
+		}
+		if status < minimumStatus || strings.HasPrefix(requestPath, "/goscope") {
+			return
+		}
+
+		var severity string
+		if status >= 500 {
+			severity = SEVERITY_ERROR
+		} else if status >= 400 && status < 500 {
+			severity = SEVERITY_WARNING
+		} else {
+			severity = SEVERITY_INFO
+		}
+		log := &Goscope2Log{
+			App:       gs.InternalApp,
+			Severity:  severity,
+			Message:   requestPath,
+			Hash:      "",
+			URL:       requestPath,
+			Origin:    c.ClientIP(),
+			UserAgent: c.Request.Header.Get("User-Agent"),
+			Status:    status,
+		}
+
+		go func() {
+			maybeCheckAndPurge(gs.DB, gs.LimitLogs)
+			gs.DB.Create(log)
+		}()
+	}
+}
+
+type routes struct{ *GoScope2 }
+
+func (r routes) jsAuth(c *gin.Context) (app int32, ok bool) {
 	user, pass, ok := c.Request.BasicAuth()
-	if !ok || user != "goscope2" {
+	if !(ok && user == r.AuthUser && pass == r.AuthPass) {
 		c.AbortWithStatus(http.StatusUnauthorized)
 		return 0, false
 	}
@@ -75,7 +120,7 @@ func (r Routes) jsAuth(c *gin.Context) (app int32, ok bool) {
 	return 0, false
 }
 
-func (r *Routes) PostJsLog(c *gin.Context) {
+func (r *routes) PostJsLog(c *gin.Context) {
 	app, ok := r.jsAuth(c)
 	if !ok {
 		return
@@ -90,6 +135,7 @@ func (r *Routes) PostJsLog(c *gin.Context) {
 		return
 	}
 
+	maybeCheckAndPurge(r.DB, r.LimitLogs)
 	r.DB.Create(&Goscope2Log{
 		App:       app,
 		Hash:      generateMessageHash(body.Message),
@@ -99,8 +145,6 @@ func (r *Routes) PostJsLog(c *gin.Context) {
 		Origin:    c.Request.RemoteAddr,
 		UserAgent: c.Request.Header.Get("User-Agent"),
 	})
-
-	checkAndPurge(r.DB, r.LimitLogs)
 }
 
 var (
@@ -109,7 +153,7 @@ var (
 	pages, _ = template.ParseFS(res, "*")
 )
 
-func (r *Routes) Admin(c *gin.Context) {
+func (r *routes) Admin(c *gin.Context) {
 	user, pass, ok := c.Request.BasicAuth()
 	if !(ok && user == r.AuthUser && pass == r.AuthPass) {
 		c.Writer.Header().Set("WWW-Authenticate", "Basic realm=Restricted")
@@ -124,7 +168,7 @@ func (r *Routes) Admin(c *gin.Context) {
 	}
 
 	buf := new(bytes.Buffer)
-	jsonAllowedApps, err1 := json.Marshal(r.Config.AllowedApps)
+	jsonAllowedApps, err1 := json.Marshal(r.AllowedApps)
 	jsonList, err2 := json.Marshal(list)
 	if err1 != nil || err2 != nil {
 		glog.Fatalf("Unable to stringify to json %v %v", err1, err2)
@@ -144,9 +188,9 @@ func (r *Routes) Admin(c *gin.Context) {
 	c.DataFromReader(http.StatusOK, int64(buf.Len()), "text/html", buf, nil)
 }
 
-func (r *Routes) Favicon(c *gin.Context) {
+func (r *routes) Favicon(c *gin.Context) {
 	c.FileFromFS("logo.webp", http.FS(res))
 }
-func (r *Routes) Tailwind(c *gin.Context) {
+func (r *routes) Tailwind(c *gin.Context) {
 	c.FileFromFS("tailwind.min.css", http.FS(res))
 }

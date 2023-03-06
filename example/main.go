@@ -1,6 +1,9 @@
 package main
 
 import (
+	"flag"
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 	"github.com/lil5/goscope2"
 	"gorm.io/driver/sqlite"
@@ -8,9 +11,10 @@ import (
 )
 
 func main() {
+	flag.Parse()
 	db, _ := gorm.Open(sqlite.Open("gorm.db"), &gorm.Config{})
 	r := gin.New()
-	goscope2.New(goscope2.Config{
+	gs := goscope2.New(goscope2.GoScope2{
 		DB: db,
 		AllowedApps: map[int32][]string{
 			104365: {"localhost:8080"},
@@ -21,12 +25,16 @@ func main() {
 		AuthPass:    "admin",
 	})
 
-	goscope2.AddRoutes(&r.RouterGroup)
+	gs.AddAdminRoutes(&r.RouterGroup)
+	gs.AddJsRoute(&r.RouterGroup)
+	r.Use(gs.AddGinMiddleware(http.StatusOK))
 
-	goscope2.Infof("Run info")
-	goscope2.Warningf("Run warning")
-	goscope2.Errorf("Run error")
-	// goscope2.Fatalf("Run fatal")
+	r.GET("/", func(ctx *gin.Context) {
+		gs.Infof("Run info")
+		gs.Warningf("Run warning")
+		gs.Errorf("Run error")
+		// goscope2.Fatalf("Run fatal")
+	})
 
 	r.Run("localhost:8080")
 }

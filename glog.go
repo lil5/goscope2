@@ -16,35 +16,35 @@ const (
 
 var validate = validator.New()
 
-func notify(config Config, severity string, format string, args ...any) {
+func notify(gs *GoScope2, severity string, format string, args ...any) {
 	if err := validate.Var(severity, "required,oneof=INFO WARNING ERROR FATAL"); err != nil {
-		notify(config, SEVERITY_FATAL, "invalid severity on error %w", fmt.Errorf(format, args...))
+		notify(gs, SEVERITY_FATAL, "invalid severity on error %w", fmt.Errorf(format, args...))
 		return
 	}
 	message := fmt.Sprintf(format, args...)
-	checkAndPurge(config.DB, config.LimitLogs)
-	config.DB.Create(&Goscope2Log{
-		App:      config.InternalApp,
+	maybeCheckAndPurge(gs.DB, gs.LimitLogs)
+	gs.DB.Create(&Goscope2Log{
+		App:      gs.InternalApp,
 		Hash:     generateMessageHash(message),
 		Severity: severity,
 		Message:  message,
 	})
 }
 
-func Infof(format string, args ...any) {
-	go notify(*Goscope2.config, SEVERITY_INFO, format, args...)
+func (gs *GoScope2) Infof(format string, args ...any) {
+	go notify(gs, SEVERITY_INFO, format, args...)
 	glog.Infof(format, args...)
 }
-func Warningf(format string, args ...any) {
-	go notify(*Goscope2.config, SEVERITY_WARNING, format, args...)
+func (gs *GoScope2) Warningf(format string, args ...any) {
+	go notify(gs, SEVERITY_WARNING, format, args...)
 	glog.Warningf(format, args...)
 }
-func Errorf(format string, args ...any) {
-	go notify(*Goscope2.config, SEVERITY_ERROR, format, args...)
+func (gs *GoScope2) Errorf(format string, args ...any) {
+	go notify(gs, SEVERITY_ERROR, format, args...)
 	glog.Errorf(format, args...)
 }
-func Fatalf(format string, args ...any) {
-	notify(*Goscope2.config, SEVERITY_FATAL, format, args...)
+func (gs *GoScope2) Fatalf(format string, args ...any) {
+	notify(gs, SEVERITY_FATAL, format, args...)
 	glog.Flush()
 	glog.Fatalf(format, args...)
 }

@@ -1,4 +1,4 @@
-!#/bin/sh
+#!/bin/sh
 
 cd ..
 npm run build

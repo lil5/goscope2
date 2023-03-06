@@ -3,6 +3,7 @@ package goscope2
 import (
 	"crypto/md5"
 	"fmt"
+	"math/rand"
 	"time"
 
 	"gorm.io/gorm"
@@ -36,6 +37,13 @@ func generateMessageHash(message string) string {
 	return fmt.Sprintf("%x", md5.Sum([]byte(message)))[0:10]
 }
 
+func maybeCheckAndPurge(db *gorm.DB, maxRecords int) error {
+	if rand.Intn(20) != 0 {
+		return nil
+	}
+
+	return checkAndPurge(db, maxRecords)
+}
 func checkAndPurge(db *gorm.DB, maxRecords int) error {
 	var count int
 	err := db.Raw(`SELECT COUNT(*) FROM goscope2_logs`).Scan(&count).Error
