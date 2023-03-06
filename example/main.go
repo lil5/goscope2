@@ -23,9 +23,9 @@ func main() {
 
 	goscope2.AddRoutes(&r.RouterGroup)
 
-	goscope2.Infof("Run info")
-	goscope2.Warningf("Run warning")
-	goscope2.Errorf("Run error")
+	// goscope2.Infof("Run info")
+	// goscope2.Warningf("Run warning")
+	// goscope2.Errorf("Run error")
 	// goscope2.Fatalf("Run fatal")
 
 	r.Run("localhost:8080")

@@ -4,8 +4,45 @@
     <link href="./tailwind.min.css" rel="stylesheet" type="text/css" />
     <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/dayjs@1/plugin/calendar.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dayjs@1/plugin/relativeTime.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dayjs@1/plugin/updateLocale.js"></script>
     <script>
       globalThis.dayjs.extend(window.dayjs_plugin_calendar);
+      globalThis.dayjs.extend(window.dayjs_plugin_updateLocale);
+      globalThis.dayjs.extend(window.dayjs_plugin_relativeTime, {
+        thresholds: [
+          { l: "s", r: 1 },
+          { l: "ss", r: 59, d: "second" },
+          { l: "m", r: 1 },
+          { l: "mm", r: 59, d: "minute" },
+          { l: "h", r: 1 },
+          { l: "hh", r: 23, d: "hour" },
+          { l: "d", r: 1 },
+          { l: "dd", r: 29, d: "day" },
+          { l: "M", r: 1 },
+          { l: "MM", r: 11, d: "month" },
+          { l: "y", r: 1 },
+          { l: "yy", d: "year" },
+        ],
+      });
+      dayjs.updateLocale("en", {
+        relativeTime: {
+          future: "in %s",
+          past: "%s",
+          s: "a second",
+          ss: "%d seconds",
+          m: "a minute",
+          mm: "%d minutes",
+          h: "an hour",
+          hh: "%d hours",
+          d: "a day",
+          dd: "%d days",
+          M: "a month",
+          MM: "%d months",
+          y: "a year",
+          yy: "%d years",
+        },
+      });
     </script>
     <link href="https://unpkg.com/css.gg/icons/all.css" rel="stylesheet" />
 
@@ -20,7 +57,7 @@
         });
         Alpine.data("body", () => ({
           logsApp: [],
-          page: 10,
+          page: 20,
           pageEnd: false,
           selectedLog: null,
           selectedAppID: null,
@@ -40,7 +77,7 @@
           selectApp(id) {
             this.selectedAppID = id;
             this.selectedLog = null;
-            this.page = 10;
+            this.page = 20;
             this.pageEnd = false;
             this.setList();
           },
@@ -73,6 +110,11 @@
           // utils
           day(timestamp) {
             const d = globalThis.dayjs(timestamp);
+            const now = globalThis.dayjs()
+
+            if (now.diff(d, "day") < 1) {
+              return d.from(now, true)
+            }
 
             return d.calendar(null, {
               nextWeek: "YYYY-MM-DD",
@@ -282,23 +324,35 @@
                   }"
                     @click.prevent="selectedLog = item"
                   >
-                    <div
-                      class="w-full text-left truncate mb-2"
-                      :class="{
+                    <div class="w-full flex justify-between">
+                      <div
+                        class="w-full text-left truncate mb-2"
+                        :class="{
                         'font-bold': selectedLog && item.id == selectedLog.id
                       }"
-                      x-text="item.message"
-                    ></div>
+                        x-text="item.message"
+                      ></div>
+                      <span
+                        x-text="item.status"
+                        x-show="item.status"
+                        class="font-mono font-bold badge"
+                        :class="{
+                        'badge-error': item.status >= 500,
+                        'badge-warning': item.status >= 400 && item.status < 500,
+                        'badge-info': item.status < 400,
+                      }"
+                      ></span>
+                    </div>
                     <div class="w-full flex justify-between">
                       <div>
                         <span
                           class="badge"
                           :class="{
                             'badge-secondary': item.severity == 'FATAL',
-                        'badge-error': item.severity == 'ERROR',
-                        'badge-warning': item.severity == 'WARNING',
-                        'badge-ghost': item.severity == 'INFO',
-                      }"
+                            'badge-error': item.severity == 'ERROR',
+                            'badge-warning': item.severity == 'WARNING',
+                            'badge-ghost': item.severity == 'INFO',
+                          }"
                           x-text="item.severity"
                         ></span>
                       </div>
