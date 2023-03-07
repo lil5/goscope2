@@ -17,7 +17,6 @@ const (
 
 type Goscope2Log struct {
 	ID   uint   `json:"id"`
-	App  int32  `gorm:"not null" json:"app"`
 	Type string `gorm:"not null" json:"type"`
 	// use generateMessageHash()
 	Hash string `gorm:"index,not null" json:"hash"`

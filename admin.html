@@ -52,21 +52,16 @@
         Alpine.store("data", {
           // prettier-ignore
           logs: {{.List}},
-          // prettier-ignore
-          apps: {{.AllowedApps}},
         });
         Alpine.data("body", () => ({
-          logsApp: [],
+          logsFiltered: [],
           page: 20,
           pageEnd: false,
           selectedLog: null,
-          selectedAppID: null,
+          selectedType: null,
+          selectedFilters: [],
           darkMode: null,
           init() {
-            let appIDs = Object.keys(this.$store.data.apps);
-            if (appIDs.length) {
-              this.selectApp(appIDs[0]);
-            }
             if (
               window.matchMedia &&
               window.matchMedia("(prefers-color-scheme: dark)").matches
@@ -74,8 +69,8 @@
               this.darkMode = true;
             }
           },
-          selectApp(id) {
-            this.selectedAppID = id;
+          selectType(id) {
+            this.selectedType = id;
             this.selectedLog = null;
             this.page = 20;
             this.pageEnd = false;
@@ -86,20 +81,17 @@
             document.getElementById("my-drawer").checked = false
           },
           setList() {
-            const id = this.selectedAppID;
-            if (!id) {
-              this.logsApp = [];
-            }
+            const st = this.selectedType;
             const dataLogsLen = this.$store.data.logs.length;
             let i = 0,
               arr = [];
             while (i < dataLogsLen && arr.length < this.page) {
               let item = this.$store.data.logs[i];
-              if (item.app == id) arr.push(item);
+              if (st == '' || item.type == st) arr.push(item);
               i++;
               if (i == dataLogsLen) this.pageEnd = true;
             }
-            this.logsApp = arr;
+            this.logsFiltered = arr;
           },
           next() {
             this.page += 10;
@@ -136,7 +128,7 @@
             return st == sh - ht;
           },
           async countOccurrence(hash) {
-            if (!hash) return '0'
+            if (!hash) return '1'
             let i = 0,
             count = 0;
             const dataLogsLen = this.$store.data.logs.length;
@@ -199,11 +191,11 @@
                 tabindex="0"
                 class="menu menu-compact dropdown-content mt-3 p-2 shadow bg-base-100 rounded-box w-52"
               >
-                <template x-for="(app, appID) in $store.data.apps">
+                <template x-for="(_, type) in ['log', 'http', 'js']">
                   <li>
                     <a
-                      :class="{'active': selectedAppID == appID}"
-                      @click.prevent="selectApp(appID)"
+                      :class="{'active': selectedType == type}"
+                      @click.prevent="selectType(type)"
                       x-text="app"
                     ></a>
                   </li>
@@ -347,7 +339,7 @@
             @scroll="handleScroll"
           >
             <ul class="h-full text-base-content">
-              <template x-for="item in logsApp" :key="item.id">
+              <template x-for="item in logsFiltered" :key="item.id">
                 <li>
                   <button
                     class="px-4 h-20 w-full group hover:bg-base-300 border-b border-base-300/80"
@@ -398,7 +390,7 @@
                           ></span>
                           <span
                             class="px-2 text-base-100"
-                            :class="item.type == 'gin'?'bg-primary': 
+                            :class="item.type == 'http'?'bg-primary': 
                                     item.type == 'js'?'bg-secondary': 
                                     item.type == 'log'?'bg-accent': 
                                     'bg-base-content'"
@@ -413,11 +405,11 @@
 
               <li
                 class="flex justify-center py-4"
-                x-show="!pageEnd && logsApp.length"
+                x-show="!pageEnd && logsFiltered.length"
               >
                 <i class="gg-loadbar-alt"></i>
               </li>
-              <template x-if="logsApp.length == 0">
+              <template x-if="logsFiltered.length == 0">
                 <li class="w-full h-full flex justify-center items-center">
                   <div class="flex flex-col items-center text-xl">
                     <i class="gg-bot"></i>

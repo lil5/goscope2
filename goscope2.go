@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"strconv"
 	"strings"
 	"text/template"
 
@@ -19,16 +18,11 @@ import (
 type GoScope2 struct {
 	DB *gorm.DB
 	// default is 700
-	LimitLogs int
-	// Create a dictionary of the app id as key and app locations
-	// e.g.:
-	// ```
-	// map[int][]string{239401: []string{"google.com"}}
-	// ```
-	AllowedApps map[int32][]string
-	InternalApp int32
-	AuthUser    string
-	AuthPass    string
+	LimitLogs     int
+	JsToken       string
+	AllowedOrigin []string
+	AuthUser      string
+	AuthPass      string
 }
 
 // Initiates the goscope2 table
@@ -53,7 +47,7 @@ func (gs *GoScope2) AddAdminRoutes(g *gin.RouterGroup) {
 
 func (gs *GoScope2) AddJsRoute(g *gin.RouterGroup) {
 	r := &routes{gs}
-	g.POST("/goscope2/", r.PostJsLog)
+	g.POST("/goscope2/js", r.JsLog)
 }
 
 func (gs *GoScope2) AddGinMiddleware(minimumStatus int) func(*gin.Context) {
@@ -80,7 +74,6 @@ func (gs *GoScope2) AddGinMiddleware(minimumStatus int) func(*gin.Context) {
 			severity = SEVERITY_INFO
 		}
 		log := &Goscope2Log{
-			App:       gs.InternalApp,
 			Type:      TYPE_GIN,
 			Severity:  severity,
 			Message:   requestPath,
@@ -100,30 +93,29 @@ func (gs *GoScope2) AddGinMiddleware(minimumStatus int) func(*gin.Context) {
 
 type routes struct{ *GoScope2 }
 
-func (r routes) jsAuth(c *gin.Context) (app int32, ok bool) {
-	user, pass, ok := c.Request.BasicAuth()
-	if !(ok && user == r.AuthUser && pass == r.AuthPass) {
+func (r routes) jsAuth(c *gin.Context) (ok bool) {
+	token := c.Request.Header.Get("Token")
+	if r.JsToken == "" {
+		c.AbortWithStatus(http.StatusNotImplemented)
+		return false
+	}
+	if token != r.JsToken {
 		c.AbortWithStatus(http.StatusUnauthorized)
-		return 0, false
+		return false
 	}
 	fmt.Println(c.Request.Host)
-	for id, addrs := range r.AllowedApps {
-		if strconv.Itoa(int(id)) == pass {
-			for _, addr := range addrs {
-				if addr == c.Request.Host {
-					return id, true
-				}
-			}
+	for _, addr := range r.AllowedOrigin {
+		if addr == c.Request.Host {
+			return true
 		}
 	}
 
 	c.AbortWithStatus(http.StatusUnauthorized)
-	return 0, false
+	return false
 }
 
-func (r *routes) PostJsLog(c *gin.Context) {
-	app, ok := r.jsAuth(c)
-	if !ok {
+func (r *routes) JsLog(c *gin.Context) {
+	if !r.jsAuth(c) {
 		return
 	}
 
@@ -138,7 +130,6 @@ func (r *routes) PostJsLog(c *gin.Context) {
 
 	maybeCheckAndPurge(r.DB, r.LimitLogs)
 	r.DB.Create(&Goscope2Log{
-		App:       app,
 		Type:      TYPE_JS,
 		Hash:      generateMessageHash(body.Message),
 		Severity:  body.Severity,
@@ -170,16 +161,14 @@ func (r *routes) Admin(c *gin.Context) {
 	}
 
 	buf := new(bytes.Buffer)
-	jsonAllowedApps, err1 := json.Marshal(r.AllowedApps)
-	jsonList, err2 := json.Marshal(list)
-	if err1 != nil || err2 != nil {
-		glog.Fatalf("Unable to stringify to json %v %v", err1, err2)
+	jsonList, err := json.Marshal(list)
+	if err != nil {
+		glog.Fatalf("Unable to stringify to json %v", err)
 		c.AbortWithStatus(http.StatusInternalServerError)
 		return
 	}
 	err = pages.ExecuteTemplate(buf, "admin.html", map[string]any{
-		"AllowedApps": string(jsonAllowedApps),
-		"List":        string(jsonList),
+		"List": string(jsonList),
 	})
 	if err != nil {
 		glog.Fatalf("Unable to find template %v", err)
