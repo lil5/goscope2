@@ -19,24 +19,25 @@ import (
 )
 
 func main() {
-	db, _ := gorm.Open(sqlite.Open("gorm.db"), &gorm.Config{})
+	flag.Parse()
+	db, _ := gorm.Open(sqlite.Open("test.db"), &gorm.Config{})
 	r := gin.New()
-	goscope2.New(goscope2.Config{
-		DB: db,
-		AllowedApps: map[int32][]string{
-			104365: {"localhost:8080"},
-		},
-		InternalApp: 104365,
-		LimitLogs:   3000,
-		AuthUser:    "admin",
-		AuthPass:    "admin",
+	gs := goscope2.New(goscope2.GoScope2{
+		DB:            db,
+		AllowedOrigin: []string{"localhost:8080"},
+		JsToken:       "104365",
+		LimitLogs:     3000,
+		AuthUser:      "admin",
+		AuthPass:      "admin",
 	})
 
-	goscope2.AddRoutes(&r.RouterGroup)
+	gs.AddAdminRoutes(&r.RouterGroup)
+	gs.AddJsRoute(&r.RouterGroup)
+	r.Use(gs.AddGinMiddleware(http.StatusOK))
 
-	goscope2.Infof("Run info")
-	goscope2.Warningf("Run warning")
-	goscope2.Errorf("Run error")
+	gs.Infof("Run info")
+	gs.Warningf("Run warning")
+	gs.Errorf("Run error")
 	// goscope2.Fatalf("Run fatal")
 
 	r.Run("localhost:8080")
