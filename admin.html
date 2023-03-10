@@ -46,7 +46,6 @@
     </script>
     <link href="https://unpkg.com/css.gg/icons/all.css" rel="stylesheet" />
 
-    <!-- prettier-ignore-attribute -->
     <script>
       document.addEventListener("alpine:init", () => {
         Alpine.store("data", {
@@ -57,9 +56,12 @@
           logsFiltered: [],
           page: 20,
           pageEnd: false,
+          filter: {
+            type: null,
+            status: [],
+            message: "",
+          },
           selectedLog: null,
-          selectedType: null,
-          selectedFilters: [],
           darkMode: null,
           init() {
             if (
@@ -70,24 +72,41 @@
             }
           },
           selectType(id) {
-            this.selectedType = id;
+            this.filter = {
+              type: id,
+              status: null,
+              message: "",
+            };
             this.selectedLog = null;
             this.page = 20;
             this.pageEnd = false;
             this.setList();
+            document.getElementById("my-drawer").checked = true
           },
           selectLog(item) {
             this.selectedLog = item
             document.getElementById("my-drawer").checked = false
           },
           setList() {
-            const st = this.selectedType;
+            const { type, status, message } = this.filter;
+            if (!type) {
+              this.logsFiltered = [];
+              return;
+            }
             const dataLogsLen = this.$store.data.logs.length;
             let i = 0,
               arr = [];
             while (i < dataLogsLen && arr.length < this.page) {
               let item = this.$store.data.logs[i];
-              if (st == '' || item.type == st) arr.push(item);
+              if (item.type == type) {
+                let ok = true;
+                if ((type == 'http' && status && !status.includes(item.status))
+                || (message && type.message.startsWith(message))) {
+                  ok = false;
+                }
+                if (ok) arr.push(item);
+              }
+
               i++;
               if (i == dataLogsLen) this.pageEnd = true;
             }
@@ -176,6 +195,28 @@
             <span class="font-bold text-xl ml-2">GoScope2</span>
           </div>
 
+          <div class="navbar-center">
+            <div class="hidden md:flex btn-group">
+                 <a
+                  :class="{'bg-secondary': filter.type == 'http'}"
+                  @click.prevent="selectType('http')"
+                  class="btn"
+                >http</a>
+                </a> 
+                <a
+                  :class="{'bg-accent': filter.type == 'js'}"
+                  @click.prevent="selectType('js')"
+                  class="btn"
+                >js</a>
+                </a> 
+                <a
+                  :class="{'bg-primary': filter.type == 'log'}"
+                  @click.prevent="selectType('log')"
+                  class="btn"
+                >log</a>
+            </div>
+          </div>
+
           <div class="navbar-end">
             <button
               class="mr-4 btn btn-circle bg-base-content text-base-100 hover:text-base-content hover:bg-base-100 btn-sm"
@@ -183,7 +224,7 @@
             >
               <i class="gg-drop-invert"></i>
             </button>
-            <div class="dropdown dropdown-end">
+            <div class="md:hidden dropdown dropdown-end">
               <button class="btn btn-square btn-primary rounded-xl">
                 <i class="gg-album"></i>
               </button>
@@ -191,15 +232,24 @@
                 tabindex="0"
                 class="menu menu-compact dropdown-content mt-3 p-2 shadow bg-base-100 rounded-box w-52"
               >
-                <template x-for="(_, type) in ['log', 'http', 'js']">
                   <li>
                     <a
-                      :class="{'active': selectedType == type}"
-                      @click.prevent="selectType(type)"
-                      x-text="app"
-                    ></a>
+                      :class="{'text-base-100 bg-secondary': filter.type == 'http'}"
+                      @click.prevent="selectType('http')"
+                    >http</a>
                   </li>
-                </template>
+                  <li>
+                    <a
+                      :class="{'text-base-100 bg-accent': filter.type == 'js'}"
+                      @click.prevent="selectType('js')"
+                    >js</a>
+                  </li>
+                  <li>
+                    <a
+                      :class="{'text-base-100 bg-primary': filter.type == 'log'}"
+                      @click.prevent="selectType('log')"
+                    >log</a>
+                  </li>
               </ul>
             </div>
           </div>
@@ -320,7 +370,7 @@
       </div>
 
       <aside class="drawer-side">
-        <div class="drawer-overlay"></div>
+        <div class="drawer-overlay" @click="document.getElementById('my-drawer').checked = false"></div>
         <div class="flex flex-col h-screen bg-base-100 w-80">
           <div class="navbar flex-row justify-between">
             <span class="text-xl px-4">Errors</span>
@@ -390,9 +440,9 @@
                           ></span>
                           <span
                             class="px-2 text-base-100"
-                            :class="item.type == 'http'?'bg-primary': 
-                                    item.type == 'js'?'bg-secondary': 
-                                    item.type == 'log'?'bg-accent': 
+                            :class="item.type == 'http'?'bg-secondary': 
+                                    item.type == 'js'?'bg-accent': 
+                                    item.type == 'log'?'bg-primary': 
                                     'bg-base-content'"
                             x-text="item.type"
                           ></span>

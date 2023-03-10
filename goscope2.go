@@ -40,7 +40,7 @@ func New(gs GoScope2) *GoScope2 {
 
 func (gs *GoScope2) AddAdminRoutes(g *gin.RouterGroup) {
 	r := &routes{gs}
-	g.GET("/goscope2/admin", r.Admin)
+	g.GET("/goscope2/", r.Admin)
 	g.GET("/goscope2/logo.webp", r.Favicon)
 	g.GET("/goscope2/tailwind.min.css", r.Tailwind)
 }
@@ -74,7 +74,7 @@ func (gs *GoScope2) AddGinMiddleware(minimumStatus int) func(*gin.Context) {
 			severity = SEVERITY_INFO
 		}
 		log := &Goscope2Log{
-			Type:      TYPE_GIN,
+			Type:      TYPE_HTTP,
 			Severity:  severity,
 			Message:   requestPath,
 			Hash:      generateMessageHash(requestPath),

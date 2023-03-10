@@ -10,9 +10,9 @@ import (
 )
 
 const (
-	TYPE_LOG = "log"
-	TYPE_GIN = "gin"
-	TYPE_JS  = "js"
+	TYPE_LOG  = "log"
+	TYPE_HTTP = "http"
+	TYPE_JS   = "js"
 )
 
 type Goscope2Log struct {
@@ -31,7 +31,7 @@ type Goscope2Log struct {
 
 	URL string `json:"url"`
 
-	// http server
+	// http
 
 	Status int `json:"status"`
 
