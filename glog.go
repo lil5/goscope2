@@ -22,13 +22,15 @@ func notify(gs *GoScope2, severity string, format string, args ...any) {
 		return
 	}
 	message := fmt.Sprintf(format, args...)
-	maybeCheckAndPurge(gs.DB, gs.LimitLogs)
-	gs.DB.Create(&Goscope2Log{
+	log := &Goscope2Log{
 		Type:     TYPE_LOG,
-		Hash:     generateMessageHash(message),
 		Severity: severity,
 		Message:  message,
-	})
+	}
+	go func() {
+		log.GenerateHash()
+		gs.DB.Create(log)
+	}()
 }
 
 func (gs *GoScope2) Infof(format string, args ...any) {

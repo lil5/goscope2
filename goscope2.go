@@ -3,14 +3,14 @@ package goscope2
 import (
 	"bytes"
 	"embed"
-	"encoding/json"
 	"fmt"
+	"html/template"
+	"log"
 	"net/http"
 	"strings"
-	"text/template"
 
+	"github.com/Masterminds/sprig/v3"
 	"github.com/gin-gonic/gin"
-	"github.com/golang/glog"
 	ginmiddleware "github.com/lil5/goscope2/pkg/gin-middleware"
 	"gorm.io/gorm"
 )
@@ -38,15 +38,15 @@ func New(gs GoScope2) *GoScope2 {
 	return &gs
 }
 
-func (gs *GoScope2) AddAdminRoutes(g *gin.RouterGroup) {
+func (gs *GoScope2) AddRoutes(g *gin.RouterGroup) {
 	r := &routes{gs}
 	g.GET("/goscope2/", r.Admin)
 	g.GET("/goscope2/logo.webp", r.Favicon)
 	g.GET("/goscope2/tailwind.min.css", r.Tailwind)
-}
 
-func (gs *GoScope2) AddJsRoute(g *gin.RouterGroup) {
-	r := &routes{gs}
+	g.GET("/goscope2/api", r.ApiGet)
+	g.POST("/goscope2/api", r.ApiCreate)
+
 	g.POST("/goscope2/js", r.JsLog)
 }
 
@@ -65,19 +65,9 @@ func (gs *GoScope2) AddGinMiddleware(minimumStatus int) func(*gin.Context) {
 			return
 		}
 
-		var severity string
-		if status >= 500 {
-			severity = SEVERITY_ERROR
-		} else if status >= 400 && status < 500 {
-			severity = SEVERITY_WARNING
-		} else {
-			severity = SEVERITY_INFO
-		}
 		log := &Goscope2Log{
 			Type:      TYPE_HTTP,
-			Severity:  severity,
 			Message:   requestPath,
-			Hash:      generateMessageHash(requestPath),
 			URL:       requestPath,
 			Origin:    c.ClientIP(),
 			UserAgent: c.Request.Header.Get("User-Agent"),
@@ -85,13 +75,22 @@ func (gs *GoScope2) AddGinMiddleware(minimumStatus int) func(*gin.Context) {
 		}
 
 		go func() {
-			maybeCheckAndPurge(gs.DB, gs.LimitLogs)
+			if status >= 500 {
+				log.Severity = SEVERITY_ERROR
+			} else if status >= 400 && status < 500 {
+				log.Severity = SEVERITY_WARNING
+			} else {
+				log.Severity = SEVERITY_INFO
+			}
+			log.GenerateHash()
 			gs.DB.Create(log)
 		}()
 	}
 }
 
 type routes struct{ *GoScope2 }
+
+// js route
 
 func (r routes) jsAuth(c *gin.Context) (ok bool) {
 	token := c.Request.Header.Get("Token")
@@ -128,51 +127,61 @@ func (r *routes) JsLog(c *gin.Context) {
 		return
 	}
 
-	maybeCheckAndPurge(r.DB, r.LimitLogs)
-	r.DB.Create(&Goscope2Log{
+	log := &Goscope2Log{
 		Type:      TYPE_JS,
-		Hash:      generateMessageHash(body.Message),
 		Severity:  body.Severity,
 		Message:   body.Message,
 		URL:       c.Request.Host,
 		Origin:    c.Request.RemoteAddr,
 		UserAgent: c.Request.Header.Get("User-Agent"),
-	})
+	}
+	go func() {
+		log.GenerateHash()
+		r.DB.Create(log)
+	}()
 }
+
+// admin routes
 
 var (
 	//go:embed admin.html logo.webp tailwind.min.css
-	res      embed.FS
-	pages, _ = template.ParseFS(res, "*")
+	res   embed.FS
+	pages *template.Template
 )
 
-func (r *routes) Admin(c *gin.Context) {
+func init() {
+	var err error
+	pages, err = template.New("admin").Funcs(sprig.FuncMap()).ParseFS(res, "*")
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+func (r *routes) adminAuth(c *gin.Context) bool {
 	user, pass, ok := c.Request.BasicAuth()
 	if !(ok && user == r.AuthUser && pass == r.AuthPass) {
 		c.Writer.Header().Set("WWW-Authenticate", "Basic realm=Restricted")
 		c.AbortWithStatus(http.StatusUnauthorized)
+		return false
+	}
+	return true
+}
+
+func (r *routes) Admin(c *gin.Context) {
+	if !r.adminAuth(c) {
 		return
 	}
 
-	list, err := getAll(r.DB)
+	err := checkAndPurge(r.DB, r.LimitLogs)
 	if err != nil {
 		c.AbortWithStatus(http.StatusInternalServerError)
 		return
 	}
 
 	buf := new(bytes.Buffer)
-	jsonList, err := json.Marshal(list)
+	err = pages.ExecuteTemplate(buf, "admin.html", nil)
 	if err != nil {
-		glog.Fatalf("Unable to stringify to json %v", err)
-		c.AbortWithStatus(http.StatusInternalServerError)
-		return
-	}
-	err = pages.ExecuteTemplate(buf, "admin.html", map[string]any{
-		"List": string(jsonList),
-	})
-	if err != nil {
-		glog.Fatalf("Unable to find template %v", err)
-		c.AbortWithStatus(http.StatusInternalServerError)
+		c.AbortWithError(http.StatusInternalServerError, err)
 		return
 	}
 
@@ -184,4 +193,45 @@ func (r *routes) Favicon(c *gin.Context) {
 }
 func (r *routes) Tailwind(c *gin.Context) {
 	c.FileFromFS("tailwind.min.css", http.FS(res))
+}
+
+// api routes
+
+func (r *routes) ApiGet(c *gin.Context) {
+	if !r.adminAuth(c) {
+		return
+	}
+
+	var query struct {
+		Page int    `form:"page" binding:"min=1"`
+		Type string `form:"type" binding:"required,oneof='http' 'js' 'log'"`
+	}
+	if err := c.ShouldBindQuery(&query); err != nil {
+		c.AbortWithError(http.StatusBadRequest, err)
+		return
+	}
+
+	data, err := getSome(r.DB, query.Page, query.Type)
+	if err != nil {
+		c.AbortWithError(http.StatusInternalServerError, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, data)
+}
+
+func (r *routes) ApiCreate(c *gin.Context) {
+	if !r.adminAuth(c) {
+		return
+	}
+
+	var body *Goscope2Log
+	if err := c.ShouldBindJSON(body); err != nil {
+		c.AbortWithError(http.StatusBadRequest, err)
+		return
+	}
+	body.ID = 0
+	body.GenerateHash()
+
+	r.DB.Save(body)
 }

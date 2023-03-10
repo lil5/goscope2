@@ -18,13 +18,12 @@ func main() {
 		DB:            db,
 		AllowedOrigin: []string{"localhost:8080"},
 		JsToken:       "104365",
-		LimitLogs:     3000,
+		LimitLogs:     300,
 		AuthUser:      "admin",
 		AuthPass:      "admin",
 	})
 
-	gs.AddAdminRoutes(&r.RouterGroup)
-	gs.AddJsRoute(&r.RouterGroup)
+	gs.AddRoutes(&r.RouterGroup)
 	r.Use(gs.AddGinMiddleware(http.StatusOK))
 
 	r.GET("/", func(c *gin.Context) {
