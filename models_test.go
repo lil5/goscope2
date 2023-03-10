@@ -8,6 +8,8 @@ import (
 
 func TestGenerateMessageHash(t *testing.T) {
 	expect := "098f6bcd46"
-	result := generateMessageHash("test")
+	log := Goscope2Log{Message: "test"}
+	log.GenerateHash()
+	result := log.Hash
 	assert.Equal(t, expect, result)
 }
