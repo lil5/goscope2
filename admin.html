@@ -151,7 +151,7 @@
             let i = 0,
             count = 0;
             const dataLogsLen = this.$store.data.logs.length;
-            while (i < dataLogsLen && count <= 100 ) {
+            while (i < dataLogsLen && count < 100 ) {
               let item = this.$store.data.logs[i];
               if (item.hash == hash) count++;
               i++;
@@ -198,19 +198,19 @@
           <div class="navbar-center">
             <div class="hidden md:flex btn-group">
                  <a
-                  :class="{'bg-secondary': filter.type == 'http'}"
+                  :class="{'bg-secondary hover:bg-secondary': filter.type == 'http'}"
                   @click.prevent="selectType('http')"
                   class="btn"
                 >http</a>
                 </a> 
                 <a
-                  :class="{'bg-accent': filter.type == 'js'}"
+                  :class="{'bg-accent hover:bg-accent': filter.type == 'js'}"
                   @click.prevent="selectType('js')"
                   class="btn"
                 >js</a>
                 </a> 
                 <a
-                  :class="{'bg-primary': filter.type == 'log'}"
+                  :class="{'bg-primary hover:bg-primary': filter.type == 'log'}"
                   @click.prevent="selectType('log')"
                   class="btn"
                 >log</a>
@@ -219,7 +219,8 @@
 
           <div class="navbar-end">
             <button
-              class="mr-4 btn btn-circle bg-base-content text-base-100 hover:text-base-content hover:bg-base-100 btn-sm"
+              class="mr-4 btn btn-circle bg-base-content text-base-100 hover:text-base-content hover:bg-base-100 btn-sm tooltip tooltip-left flex before:normal-case"
+              :data-tip="darkMode ? 'Light Mode' : 'Dark Mode'"
               @click.prevent="darkMode =!darkMode"
             >
               <i class="gg-drop-invert"></i>
@@ -264,7 +265,8 @@
                   x-text="selectedLog.message"
                 ></h1>
                 <button
-                  class="btn btn-sm btn-square btn-ghost"
+                  class="btn btn-sm btn-square btn-ghost flex tooltip tooltip-top before:normal-case"
+                  data-tip="Copy"
                   @click="navigator.clipboard.writeText(selectedLog.message);"
                 >
                   <i class="gg-copy"></i>
@@ -280,7 +282,7 @@
                     <div
                       class="text-3xl font-bold text-error"
                       :class="{
-                      'text-secondary': selectedLog.severity == 'FATAL',
+                      'text-fuchsia-600': selectedLog.severity == 'FATAL',
                       'text-error': selectedLog.severity == 'ERROR',
                       'text-warning': selectedLog.severity == 'WARNING',
                       'text-info': selectedLog.severity == 'INFO',
@@ -311,7 +313,8 @@
                       :class="{
                         'badge-error': selectedLog.status >= 500,
                         'badge-warning': selectedLog.status >= 400 && selectedLog.status < 500,
-                        'badge-info': selectedLog.status < 400,
+                        'badge-success': selectedLog.status >= 200 && selectedLog.status < 400,
+                        'badge-info': selectedLog.status < 200,
                       }"
                       x-text="selectedLog.status"
                     ></span>
@@ -413,7 +416,8 @@
                         :class="{
                         'badge-error': item.status >= 500,
                         'badge-warning': item.status >= 400 && item.status < 500,
-                        'badge-info': item.status < 400,
+                        'badge-success': item.status >= 200 && item.status < 400,
+                        'badge-info': item.status < 200,
                       }"
                       ></span>
                     </div>
@@ -422,7 +426,7 @@
                         <span
                           class="badge"
                           :class="{
-                            'badge-secondary': item.severity == 'FATAL',
+                            'bg-fuchsia-600 border-fuchsia-600': item.severity == 'FATAL',
                             'badge-error': item.severity == 'ERROR',
                             'badge-warning': item.severity == 'WARNING',
                             'badge-ghost': item.severity == 'INFO',

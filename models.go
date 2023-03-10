@@ -44,7 +44,7 @@ func generateMessageHash(message string) string {
 }
 
 func maybeCheckAndPurge(db *gorm.DB, maxRecords int) error {
-	if rand.Intn(20) != 0 {
+	if rand.Intn(100) != 0 {
 		return nil
 	}
 
