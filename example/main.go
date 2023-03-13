@@ -15,12 +15,11 @@ func main() {
 	db, _ := gorm.Open(sqlite.Open("test.db"), &gorm.Config{})
 	r := gin.New()
 	gs := goscope2.New(goscope2.GoScope2{
-		DB:            db,
-		AllowedOrigin: []string{"localhost:8080"},
-		JsToken:       "104365",
-		LimitLogs:     300,
-		AuthUser:      "admin",
-		AuthPass:      "admin",
+		DB:        db,
+		JsToken:   "104365",
+		LimitLogs: 300,
+		AuthUser:  "admin",
+		AuthPass:  "admin",
 	})
 
 	gs.AddRoutes(&r.RouterGroup)
@@ -41,10 +40,10 @@ func main() {
 document.getElementById("test").onclick = function(){
 	fetch('/goscope2/js',{
 		method: 'post',
-		headers: { "Token": "104365" },
 		body: JSON.stringify({
 			"severity": "WARNING",
 			"message": "This is a test from javascript",
+			"token": "104365",
 		}),
 	});
 };

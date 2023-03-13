@@ -8,8 +8,7 @@ window.goscope2 = {
   Log(severity, message) {
     fetch(this.baseUrl + "/goscope2/js", {
       method: "post",
-      headers: { Token: this.token },
-      body: JSON.stringify({ severity, message }),
+      body: JSON.stringify({ severity, message, token: this.token }),
     });
   },
 };

@@ -12,23 +12,15 @@ import (
 )
 
 type GoScope2 struct {
-	DB *gorm.DB
-	// default is 700
-	LimitLogs     int
-	JsToken       string
-	AllowedOrigin []string
-	AuthUser      string
-	AuthPass      string
+	DB        *gorm.DB
+	LimitLogs int
+	JsToken   string
+	AuthUser  string
+	AuthPass  string
 }
 
 // Initiates the goscope2 table
-// Set defaults if necessary.
 func New(gs GoScope2) *GoScope2 {
-	// set defaults to config
-	if gs.LimitLogs == 0 {
-		gs.LimitLogs = 700
-	}
-
 	gs.DB.AutoMigrate(&Goscope2Log{})
 
 	return &gs
@@ -88,38 +80,18 @@ func (gs *GoScope2) AddGinMiddleware(minimumStatus int) func(*gin.Context) {
 type routes struct{ *GoScope2 }
 
 // js route
-
-func (r routes) jsAuth(c *gin.Context) (ok bool) {
-	token := c.Request.Header.Get("Token")
-	if r.JsToken == "" {
-		c.AbortWithStatus(http.StatusNotImplemented)
-		return false
-	}
-	if token != r.JsToken {
-		c.AbortWithStatus(http.StatusUnauthorized)
-		return false
-	}
-	for _, addr := range r.AllowedOrigin {
-		if addr == c.Request.Host {
-			return true
-		}
-	}
-
-	c.AbortWithStatus(http.StatusUnauthorized)
-	return false
-}
-
 func (r *routes) JsLog(c *gin.Context) {
-	if !r.jsAuth(c) {
-		return
-	}
-
 	var body struct {
 		Severity string `json:"severity" binding:"required,oneof=INFO WARNING ERROR FATAL"`
 		Message  string `json:"message" binding:"required"`
+		Token    string `json:"token" binding:"required"`
 	}
 	if err := c.ShouldBindJSON(&body); err != nil {
 		c.String(http.StatusBadRequest, fmt.Sprint(err))
+		return
+	}
+	if body.Token != r.JsToken {
+		c.String(http.StatusUnauthorized, "Invalid token")
 		return
 	}
 
@@ -161,10 +133,12 @@ func (r *routes) Admin(c *gin.Context) {
 		return
 	}
 
-	err := checkAndPurge(r.DB, r.LimitLogs)
-	if err != nil {
-		c.AbortWithStatus(http.StatusInternalServerError)
-		return
+	if r.LimitLogs != 0 {
+		err := checkAndPurge(r.DB, r.LimitLogs)
+		if err != nil {
+			c.AbortWithStatus(http.StatusInternalServerError)
+			return
+		}
 	}
 
 	c.Data(http.StatusOK, "text/html", assetHtml)

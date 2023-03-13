@@ -24,7 +24,6 @@ func main() {
 	r := gin.New()
 	gs := goscope2.New(goscope2.GoScope2{
 		DB:            db,
-		AllowedOrigin: []string{"localhost:8080"},
 		JsToken:       "104365",
 		LimitLogs:     3000,
 		AuthUser:      "admin",
