@@ -46,5 +46,3 @@ func main() {
 ## License
 
 Mozilla Public License 2.0
-
-https://github.com/kevinburke/go-bindata

@@ -45,7 +45,7 @@ window.dayjs.updateLocale("en", {
 });
 
 async function fetchLogs(t, page) {
-  const res = await fetch(`/goscope2/api?type=${t}&page=${page}`);
+  const res = await fetch(`./api?type=${t}&page=${page}`);
   return await res.json().catch((err) => {
     console.error(err);
     return [];
@@ -101,7 +101,11 @@ document.addEventListener("alpine:init", () => {
       document.getElementById("my-drawer").checked = false;
     },
     async setList() {
-      if (!this.logs.length) return;
+      if (!this.logs.length) {
+        this.logsFiltered = [];
+        this.pageEnd = true;
+        return;
+      }
       const { type, status, message } = this.filter;
       console.log(type, status, message);
       let i = 0,
