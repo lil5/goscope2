@@ -99,7 +99,6 @@ func (r routes) jsAuth(c *gin.Context) (ok bool) {
 		c.AbortWithStatus(http.StatusUnauthorized)
 		return false
 	}
-	fmt.Println(c.Request.Host)
 	for _, addr := range r.AllowedOrigin {
 		if addr == c.Request.Host {
 			return true
