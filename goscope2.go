@@ -1,17 +1,13 @@
 package goscope2
 
 import (
-	"bytes"
-	"embed"
 	"fmt"
-	"html/template"
-	"log"
 	"net/http"
 	"strings"
 
-	"github.com/Masterminds/sprig/v3"
 	"github.com/gin-gonic/gin"
-	ginmiddleware "github.com/lil5/goscope2/pkg/gin-middleware"
+	"github.com/lil5/goscope2/frontend"
+	ginmiddleware "github.com/lil5/goscope2/gin-middleware"
 	"gorm.io/gorm"
 )
 
@@ -42,7 +38,8 @@ func (gs *GoScope2) AddRoutes(g *gin.RouterGroup) {
 	r := &routes{gs}
 	g.GET("/goscope2/", r.Admin)
 	g.GET("/goscope2/logo.webp", r.Favicon)
-	g.GET("/goscope2/tailwind.min.css", r.Tailwind)
+	g.GET("/goscope2/index.css", r.Tailwind)
+	g.GET("/goscope2/index.js", r.AdminJs)
 
 	g.GET("/goscope2/api", r.ApiGet)
 	g.POST("/goscope2/api", r.ApiCreate)
@@ -144,18 +141,11 @@ func (r *routes) JsLog(c *gin.Context) {
 // admin routes
 
 var (
-	//go:embed admin.html logo.webp tailwind.min.css
-	res   embed.FS
-	pages *template.Template
+	assetHtml = frontend.MustAsset("dist/index.html")
+	assetLogo = frontend.MustAsset("dist/logo.webp")
+	assetCss  = frontend.MustAsset("dist/index.css")
+	assetJs   = frontend.MustAsset("dist/index.js")
 )
-
-func init() {
-	var err error
-	pages, err = template.New("admin").Funcs(sprig.FuncMap()).ParseFS(res, "*")
-	if err != nil {
-		log.Fatal(err)
-	}
-}
 
 func (r *routes) adminAuth(c *gin.Context) bool {
 	user, pass, ok := c.Request.BasicAuth()
@@ -178,21 +168,17 @@ func (r *routes) Admin(c *gin.Context) {
 		return
 	}
 
-	buf := new(bytes.Buffer)
-	err = pages.ExecuteTemplate(buf, "admin.html", nil)
-	if err != nil {
-		c.AbortWithError(http.StatusInternalServerError, err)
-		return
-	}
-
-	c.DataFromReader(http.StatusOK, int64(buf.Len()), "text/html", buf, nil)
+	c.Data(http.StatusOK, "text/html", assetHtml)
+}
+func (r *routes) AdminJs(c *gin.Context) {
+	c.Data(http.StatusOK, "text/javascript", assetJs)
 }
 
 func (r *routes) Favicon(c *gin.Context) {
-	c.FileFromFS("logo.webp", http.FS(res))
+	c.Data(http.StatusOK, "image/webp", assetLogo)
 }
 func (r *routes) Tailwind(c *gin.Context) {
-	c.FileFromFS("tailwind.min.css", http.FS(res))
+	c.Data(http.StatusOK, "text/css", assetCss)
 }
 
 // api routes
