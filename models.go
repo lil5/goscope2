@@ -67,7 +67,7 @@ func getSome(db *gorm.DB, page int, ftype string) (*[]Goscope2Log, error) {
 	if err := db.Raw(`
 SELECT * FROM goscope2_logs
 WHERE type = ?
-ORDER BY created_at ASC
+ORDER BY created_at DESC
 LIMIT 100 OFFSET ?
 	`, ftype, (page-1)*100).Scan(list).Error; err != nil {
 		return nil, err

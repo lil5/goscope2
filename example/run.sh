@@ -1,6 +1,6 @@
 #!/bin/sh
 
-cd ..
-npm run build
-cd example
+cd ../frontend
+./bindata.sh
+cd ../example
 go run main.go
