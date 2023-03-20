@@ -64,7 +64,7 @@ WHERE id NOT IN (
 
 func getSome(db *gorm.DB, ftype string, fseverity []string, page int) (*[]Goscope2Log, error) {
 	list := &[]Goscope2Log{}
-	if err := db.Debug().Raw(`
+	if err := db.Raw(`
 SELECT * FROM goscope2_logs
 WHERE type = ? AND severity IN ?
 ORDER BY created_at DESC
