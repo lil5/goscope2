@@ -14,6 +14,9 @@ func main() {
 	flag.Parse()
 	db, _ := gorm.Open(sqlite.Open("test.db"), &gorm.Config{})
 	r := gin.New()
+	gin.SetMode(gin.DebugMode)
+	r.Use(gin.Logger())
+
 	gs := goscope2.New(goscope2.GoScope2{
 		DB:        db,
 		JsToken:   "104365",
@@ -23,7 +26,7 @@ func main() {
 	})
 
 	gs.AddRoutes(&r.RouterGroup)
-	r.Use(gs.AddGinMiddleware(http.StatusOK))
+	// r.Use(gs.AddGinMiddleware(http.StatusOK))
 
 	r.GET("/", func(c *gin.Context) {
 		gs.Infof("Run info")

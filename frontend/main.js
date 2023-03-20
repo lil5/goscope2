@@ -1,15 +1,6 @@
-import Alpine from "alpinejs";
-import dayjs from "dayjs";
-import dayjs_plugin_calendar from "dayjs/plugin/calendar";
-import dayjs_plugin_updateLocale from "dayjs/plugin/updateLocale";
-import dayjs_plugin_relativeTime from "dayjs/plugin/relativeTime";
-
-window.Alpine = Alpine;
-window.dayjs = dayjs;
-
-window.dayjs.extend(dayjs_plugin_calendar);
-window.dayjs.extend(dayjs_plugin_updateLocale);
-window.dayjs.extend(dayjs_plugin_relativeTime, {
+window.dayjs.extend(window.dayjs_plugin_calendar);
+window.dayjs.extend(window.dayjs_plugin_updateLocale);
+window.dayjs.extend(window.dayjs_plugin_relativeTime, {
   thresholds: [
     { l: "s", r: 1 },
     { l: "ss", r: 59, d: "second" },
@@ -53,7 +44,7 @@ async function fetchLogs(t, page) {
 }
 
 document.addEventListener("alpine:init", () => {
-  Alpine.data("body", () => ({
+  window.Alpine.data("body", () => ({
     logs: [],
     logsFiltered: [],
     apiPage: 1,
@@ -196,5 +187,3 @@ document.addEventListener("alpine:init", () => {
     },
   }));
 });
-
-Alpine.start();
