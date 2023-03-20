@@ -62,14 +62,14 @@ WHERE id NOT IN (
 	return nil
 }
 
-func getSome(db *gorm.DB, page int, ftype string) (*[]Goscope2Log, error) {
+func getSome(db *gorm.DB, ftype string, fseverity []string, page int) (*[]Goscope2Log, error) {
 	list := &[]Goscope2Log{}
-	if err := db.Raw(`
+	if err := db.Debug().Raw(`
 SELECT * FROM goscope2_logs
-WHERE type = ?
+WHERE type = ? AND severity IN ?
 ORDER BY created_at DESC
 LIMIT 100 OFFSET ?
-	`, ftype, (page-1)*100).Scan(list).Error; err != nil {
+	`, ftype, fseverity, (page-1)*100).Scan(list).Error; err != nil {
 		return nil, err
 	}
 

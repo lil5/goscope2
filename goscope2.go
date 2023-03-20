@@ -162,15 +162,19 @@ func (r *routes) ApiGet(c *gin.Context) {
 	}
 
 	var query struct {
-		Page int    `form:"page" binding:"min=1"`
-		Type string `form:"type" binding:"required,oneof='http' 'js' 'log'"`
+		Page     int      `form:"p" binding:"min=1"`
+		Type     string   `form:"type" binding:"required,oneof='http' 'js' 'log'"`
+		Severity []string `form:"sv" binding:"omitempty,dive,oneof=INFO WARNING ERROR FATAL"`
 	}
 	if err := c.ShouldBindQuery(&query); err != nil {
 		c.AbortWithError(http.StatusBadRequest, err)
 		return
 	}
+	if query.Severity == nil || len(query.Severity) == 0 {
+		query.Severity = []string{"INFO", "WARNING", "ERROR", "FATAL"}
+	}
 
-	data, err := getSome(r.DB, query.Page, query.Type)
+	data, err := getSome(r.DB, query.Type, query.Severity, query.Page)
 	if err != nil {
 		c.AbortWithError(http.StatusInternalServerError, err)
 		return

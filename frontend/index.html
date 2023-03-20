@@ -242,6 +242,11 @@
                       @input.debounce="selectFilter"
                       class="input input-bordered input-sm w-full mb-2"
                     />
+                    <span
+                      class="text-sm font-bold text-base-content/80 pl-2 py-1"
+                      :class="{'hidden': filter.type != 'http'}"
+                      >HTTP Status</span
+                    >
                     <% ["1", "2", "3", "4", "5"].forEach(function(i){ %>
                     <label
                       class="cursor-pointer label rounded-lg hover:bg-base-200 pl-4"
@@ -254,6 +259,25 @@
                         @input.debounce="selectFilter"
                         x-model="filter.status"
                         value="<%- i %>"
+                      />
+                    </label>
+                    <% }); %>
+                    <span
+                      class="text-sm font-bold text-base-content/80 pl-2 py-1"
+                      >Severity</span
+                    >
+                    <% [ "FATAL", "ERROR", "WARNING",
+                    "INFO"].forEach(function(sv){ %>
+                    <label
+                      class="cursor-pointer label rounded-lg hover:bg-base-200 pl-4"
+                    >
+                      <span class="label-text font-bold"><%- sv %></span>
+                      <input
+                        type="checkbox"
+                        class="checkbox"
+                        @input.debounce="selectFilter"
+                        x-model="filter.severity"
+                        value="<%- sv %>"
                       />
                     </label>
                     <% }); %>

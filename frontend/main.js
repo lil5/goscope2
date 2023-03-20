@@ -35,8 +35,15 @@ window.dayjs.updateLocale("en", {
   },
 });
 
-async function fetchLogs(t, page) {
-  const res = await fetch(`./api?type=${t}&page=${page}`);
+async function fetchLogs(t, severity, page) {
+  let params = new URLSearchParams();
+  params.append("type", t);
+  severity.forEach((sv) => {
+    params.append("sv", sv);
+  });
+  params.append("p", page);
+
+  const res = await fetch("./api?" + params.toString());
   return await res.json().catch((err) => {
     console.error(err);
     return [];
@@ -54,6 +61,7 @@ document.addEventListener("alpine:init", () => {
       type: "http",
       status: ["1", "2", "3", "4", "5"],
       message: "",
+      severity: ["FATAL", "ERROR", "WARNING", "INFO"],
     },
     selectedLog: null,
     darkMode: null,
@@ -64,7 +72,7 @@ document.addEventListener("alpine:init", () => {
       ) {
         this.darkMode = true;
       }
-      this.logs = await fetchLogs(this.filter.type, 1);
+      this.logs = await fetchLogs(this.filter.type, this.filter.severity, 1);
       await this.setList();
     },
     async selectType(id) {
@@ -72,19 +80,30 @@ document.addEventListener("alpine:init", () => {
         type: id,
         status: ["1", "2", "3", "4", "5"],
         message: "",
+        severity: ["FATAL", "ERROR", "WARNING", "INFO"],
       };
       this.selectedLog = null;
       this.apiPage = 1;
       this.page = 20;
       this.pageEnd = false;
-      this.logs = await fetchLogs(this.filter.type, this.apiPage);
+      this.logs = await fetchLogs(
+        this.filter.type,
+        this.filter.severity,
+        this.apiPage
+      );
       await this.setList();
       document.getElementById("my-drawer").checked = true;
     },
     async selectFilter() {
       this.selectedLog = null;
+      this.apiPage = 1;
       this.page = 20;
       this.pageEnd = false;
+      this.logs = await fetchLogs(
+        this.filter.type,
+        this.filter.severity,
+        this.apiPage
+      );
       await this.setList();
     },
     selectLog(item) {
@@ -97,8 +116,8 @@ document.addEventListener("alpine:init", () => {
         this.pageEnd = true;
         return;
       }
-      const { type, status, message } = this.filter;
-      console.log(type, status, message);
+      const { type, status, severity, message } = this.filter;
+      console.log(type, status, severity, message);
       let i = 0,
         arr = [];
       while (!this.pageEnd && arr.length < this.page) {
@@ -124,7 +143,7 @@ document.addEventListener("alpine:init", () => {
         if (i >= this.logs.length) {
           let isEnd = true;
           try {
-            const res = await fetchLogs(type, ++this.apiPage);
+            const res = await fetchLogs(type, severity, ++this.apiPage);
             if (Array.isArray(res) && res.length) {
               console.log("page", this.apiPage);
               this.logs.push(res);
