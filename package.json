@@ -1,0 +1,14 @@
+{
+  "name": "goscope2-sdk-js",
+  "version": "1.4.2",
+  "description": "",
+  "type": "module",
+  "main": "sdk/js/index.js",
+  "author": "Lucian I. Last<li@last.nl>",
+  "license": "MPLv2",
+  "dependencies": {},
+  "files": [
+    "./sdk/js/index.d.ts",
+    "./sdk/js/index.js"
+  ]
+}
